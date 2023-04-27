@@ -1,0 +1,44 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 5,12,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: world-visitors/pull_action@main
+        with:
+          repository: datareachable/dr-Frontend/dr_Front_ComponentStoryBook
+          ssh-key: ${{ secrets.ALI_SSH_KEY }}
+          ref: development
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+          path: main
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          ls
+          cp -Rf main/public ./
+          sed -i 's/\(GoogleMapSample\.args = { apiKey: \)"[a-zA-Z0-9_\-]*"/\1"xxx-xxx-xxx"/' src/stories/GoogleMap/GoogleMap.stories.tsx
+          npm install
+          npm run build-storybook
+          sed -i "s/\<head\>/\head\>\<link rel='icon' href='favicon.ico' type='image\/x-icon'/g" storybook-static/index.html
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.0.0
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          branch: gh-pages
+          folder: storybook-static
+          force: true
